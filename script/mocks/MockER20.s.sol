@@ -2,19 +2,20 @@
 pragma solidity ^0.8.20;
 
 import "forge-std/Script.sol";
-import {MockERC20} from "solmate/src/test/utils/mocks/MockERC20.sol";
+import {ERC20} from "solmate/src/tokens/ERC20.sol";
 
-contract MockToken is MockERC20 {
-    constructor(string memory _name, string memory _symbol) MockERC20(_name, _symbol, 18) {}
-}
+contract MockERC20 is ERC20 {
+    constructor(
+        string memory _name,
+        string memory _symbol,
+        uint8 _decimals
+    ) ERC20(_name, _symbol, _decimals) {}
 
-contract MockTokenScript is Script {
-    function setUp() public {}
+    function mint(address to, uint256 amount) public {
+        _mint(to, amount);
+    }
 
-    function run() public {
-        vm.startBroadcast();
-        new MockToken("MockTokenA", "MOCKA");
-        new MockToken("MockTokenB", "MOCKB");
-        vm.stopBroadcast();
+    function burn(address from, uint256 amount) public {
+        _burn(from, amount);
     }
 }

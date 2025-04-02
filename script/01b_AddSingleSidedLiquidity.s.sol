@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 import "forge-std/Script.sol";
 import "forge-std/console.sol";
+
 import {IPoolManager} from "v4-core/src/interfaces/IPoolManager.sol";
 import {PoolKey} from "v4-core/src/types/PoolKey.sol";
 import {CurrencyLibrary, Currency} from "v4-core/src/types/Currency.sol";
@@ -17,53 +18,53 @@ import {Config} from "./base/Config.sol";
 
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
 
-contract AddLiquidityScript is Script, Constants, Config {
+contract AddSingleSidedLiquidity is Script, Constants, Config {
     using CurrencyLibrary for Currency;
-    using EasyPosm for IPositionManager;
     using StateLibrary for IPoolManager;
+    using EasyPosm for IPositionManager;
 
-    /////////////////////////////////////
-    // --- Parameters to Configure --- //
-    /////////////////////////////////////
-
-    // --- pool configuration --- //
-    // fees paid by swappers that accrue to liquidity providers
-    uint24 lpFee = 3000; // 0.30%
-    int24 tickSpacing = 60;
-
-    // --- liquidity position configuration --- //
-    uint256 public token0Amount = 1e18;
-    uint256 public token1Amount = 1e18;
-
-    // range of the position
-    int24 tickLower = -600; // must be a multiple of tickSpacing
-    int24 tickUpper = 600;
-    /////////////////////////////////////
+    uint24 public constant LP_FEE = 3000;
+    int24 public constant TICK_SPACING = 60;
+    uint256 public constant token1Amount = 1e6; // 1 USDC (6 decimals)
 
     function run() external {
         PoolKey memory pool = PoolKey({
-            currency0: currency0,
-            currency1: currency1,
-            fee: lpFee,
-            tickSpacing: tickSpacing,
+            currency0: currency0,  // ETH
+            currency1: currency1,  // USDC
+            fee: LP_FEE,
+            tickSpacing: TICK_SPACING,
             hooks: hookContract
         });
 
+        // Get current pool sqrtPrice and tick
         (uint160 sqrtPriceX96,,,) = POOLMANAGER.getSlot0(pool.toId());
+        int24 currentTick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
 
-        // Converts token amounts to liquidity units
-        uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
-            sqrtPriceX96,
+        // Use [currentTick - 1200, currentTick) to avoid deep MIN_TICK edge cases
+        int24 tickUpper = currentTick - (TICK_SPACING * 10);
+        int24 tickLower = tickUpper - (TICK_SPACING * 20);
+
+        console.log("currentTick:", currentTick);
+        console.log("tickLower:", tickLower);
+        console.log("tickUpper:", tickUpper);
+
+        // Calculate liquidity from token1 (USDC)
+        uint128 liquidity = LiquidityAmounts.getLiquidityForAmount1(
             TickMath.getSqrtPriceAtTick(tickLower),
             TickMath.getSqrtPriceAtTick(tickUpper),
-            token0Amount,
             token1Amount
         );
+        console.log("liquidity:", liquidity);
 
-        // slippage limits
-        uint256 amount0Max = token0Amount + 1 wei;
-        uint256 amount1Max = token1Amount + 1 wei;
+        uint256 requiredToken1 = LiquidityAmounts.getAmount1ForLiquidity(
+        TickMath.getSqrtPriceAtTick(tickLower),
+        TickMath.getSqrtPriceAtTick(tickUpper),
+        liquidity
+        );
+        console.log("requiredToken1:", requiredToken1);
 
+        uint256 amount1Max = requiredToken1 + 1_000; // 0.001 USDC buffer
+        uint256 amount0Max = 0;
         bytes memory hookData = new bytes(0);
 
         vm.startBroadcast();
@@ -78,10 +79,6 @@ contract AddLiquidityScript is Script, Constants, Config {
     }
 
     function tokenApprovals() public {
-        if (!currency0.isAddressZero()) {
-            IERC20(Currency.unwrap(currency0)).approve(address(PERMIT2), type(uint256).max);
-            PERMIT2.approve(Currency.unwrap(currency0), address(posm), type(uint160).max, type(uint48).max);
-        }
         if (!currency1.isAddressZero()) {
             IERC20(Currency.unwrap(currency1)).approve(address(PERMIT2), type(uint256).max);
             PERMIT2.approve(Currency.unwrap(currency1), address(posm), type(uint160).max, type(uint48).max);

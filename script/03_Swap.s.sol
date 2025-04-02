@@ -10,6 +10,7 @@ import {CurrencyLibrary, Currency} from "v4-core/src/types/Currency.sol";
 
 import {Constants} from "./base/Constants.sol";
 import {Config} from "./base/Config.sol";
+import {IERC20} from "forge-std/interfaces/IERC20.sol";
 
 contract SwapScript is Script, Constants, Config {
     // slippage tolerance to allow for unlimited price impact
@@ -39,9 +40,9 @@ contract SwapScript is Script, Constants, Config {
 
         // approve tokens to the swap router
         vm.broadcast();
-        token0.approve(address(swapRouter), type(uint256).max);
+        IERC20(Currency.unwrap(currency0)).approve(address(PERMIT2), type(uint256).max);
         vm.broadcast();
-        token1.approve(address(swapRouter), type(uint256).max);
+        IERC20(Currency.unwrap(currency1)).approve(address(PERMIT2), type(uint256).max);
 
         // ------------------------------ //
         // Swap 100e18 token0 into token1 //

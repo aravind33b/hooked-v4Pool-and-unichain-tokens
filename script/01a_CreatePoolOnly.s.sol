@@ -43,7 +43,10 @@ contract CreatePoolOnly is Script, Constants, Config {
             tickSpacing: tickSpacing,
             hooks: hookContract
         });
-        bytes memory hookData = new bytes(0);
+        //bytes memory hookData = new bytes(0);
+
+        bytes32 poolId = keccak256(abi.encode(pool));
+        console.logBytes32(poolId);
 
         vm.broadcast();
         IPoolManager(POOLMANAGER).initialize(pool, startingPrice);
