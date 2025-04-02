@@ -1,3 +1,4 @@
+## [Forked from] (https://github.com/uniswapfoundation/v4-template)
 # v4-template
 ### **A template for writing Uniswap v4 Hooks 🦄**
 
@@ -5,18 +6,6 @@
 
 1. The example hook [Counter.sol](src/Counter.sol) demonstrates the `beforeSwap()` and `afterSwap()` hooks
 2. The test template [Counter.t.sol](test/Counter.t.sol) preconfigures the v4 pool manager, test tokens, and test liquidity.
-
-<details>
-<summary>Updating to v4-template:latest</summary>
-
-This template is actively maintained -- you can update the v4 dependencies, scripts, and helpers: 
-```bash
-git remote add template https://github.com/uniswapfoundation/v4-template
-git fetch template
-git merge template/main <BRANCH> --allow-unrelated-histories
-```
-
-</details>
 
 ---
 
@@ -40,27 +29,20 @@ forge install
 forge test
 ```
 
-### Local Development (Anvil)
+### Testnet development steps:
 
-Other than writing unit tests (recommended!), you can only deploy & test hooks on [anvil](https://book.getfoundry.sh/anvil/)
-
-```bash
-# start anvil, a local EVM chain
-anvil
-
-# in a new terminal
-forge script script/Anvil.s.sol \
-    --rpc-url http://localhost:8545 \
-    --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 \
+1. Use an RPC URL from a node provider like Alchemy on the network of your choice.
+2. Run ```forge init``` and then run the first script to deploy the hook:
+```
+forge script script/00_Counter.s.sol \
+    --rpc-url <RPC_URL> \
+    --private-key <PRIVATE_KEY> \
     --broadcast
 ```
-
-See [script/](script/) for hook deployment, pool creation, liquidity provision, and swapping.
-
----
-
-<details>
-<summary><h2>Troubleshooting</h2></summary>
+3. Then deploy the 01_CreateToken.s.sol script similarly to deploy two Tokens and mint 1000 of each to your wallet address.
+4. Now, we have to add the token and hook addresses in the Config.sol file in script/base.
+5. Make sure you have the right Pool Manager and Position Manager addresses mentioned in the Constants.sol file in script/base.
+6. The last step is to create a pool with the two tokens and the hook attached to it. Run the 01_CreatePoolAndMintLiquidity.s.sol script for the same.
 
 
 
